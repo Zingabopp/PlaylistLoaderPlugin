@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace PlaylistLoaderLite
+namespace PlaylistLoaderLite.Objects
 {
 	// Token: 0x02000150 RID: 336
 	public class CustomBeatmapLevelCollectionSO : PersistentScriptableObject, IBeatmapLevelCollection

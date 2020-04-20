@@ -4,11 +4,13 @@ using Newtonsoft.Json.Linq;
 using SongCore;
 using System.Collections.Generic;
 using System.Linq;
+using PlaylistLoaderLite.Objects;
 
 namespace PlaylistLoaderLite
 {
     public class LoadPlaylistScript
     {
+        public static List<JObject> playlistJSONs;
         public static CustomPlaylistSO[] load()
         {
             string[] playlistPaths = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "Playlists"), "*.*").Where(p => p.EndsWith(".json") || p.EndsWith(".bplist")).ToArray();
@@ -18,6 +20,7 @@ namespace PlaylistLoaderLite
                 try
                 {
                     JObject playlistJSON = JObject.Parse(File.ReadAllText(playlistPaths[i]));
+                    playlistJSONs.Add(playlistJSON);
                     if (playlistJSON["songs"] != null)
                     {
                         JArray songs = (JArray)playlistJSON["songs"];
