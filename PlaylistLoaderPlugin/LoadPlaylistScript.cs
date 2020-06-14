@@ -4,62 +4,84 @@ using Newtonsoft.Json.Linq;
 using SongCore;
 using System.Collections.Generic;
 using System.Linq;
+using BeatSaberPlaylistsLib;
 
 namespace PlaylistLoaderLite
 {
     public class LoadPlaylistScript
     {
-        public static CustomPlaylistSO[] load()
+        public static IPlaylist[] load()
         {
-            string[] playlistPaths = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "Playlists"), "*.*").Where(p => p.EndsWith(".json") || p.EndsWith(".bplist")).ToArray();
-            List<CustomPlaylistSO> playlists = new List<CustomPlaylistSO>();
-            for (int i = 0; i < playlistPaths.Length; i++)
+            PlaylistManager manager = PlaylistManager.DefaultManager;
+            //string playlistDirectory = 
+            //    Path.Combine(Environment.CurrentDirectory, "Playlists") + "\\";
+            string[] playlistPaths 
+                = Directory.EnumerateFiles(manager.PlaylistPath, "*.*").ToArray();
+            Plugin.Log.Info($"Found {playlistPaths.Length} files in '{Path.GetFullPath(manager.PlaylistPath)}'.");
+            List<IPlaylist> playlists = new List<IPlaylist>();
+            for(int i = 0; i < playlistPaths.Length; i++)
             {
+                string fileName = Path.GetFileNameWithoutExtension(playlistPaths[i]);
                 try
                 {
-                    JObject playlistJSON = JObject.Parse(File.ReadAllText(playlistPaths[i]));
-                    if (playlistJSON["songs"] != null)
-                    {
-                        JArray songs = (JArray)playlistJSON["songs"];
-                        List<IPreviewBeatmapLevel> beatmapLevels = new List<IPreviewBeatmapLevel>();
-                        for (int j = 0; j < songs.Count; j++)
-                        {
-                            IPreviewBeatmapLevel beatmapLevel = null;
-                            String hash = (string)songs[j]["hash"];
-                            if (!string.IsNullOrEmpty(hash))
-                                beatmapLevel = MatchSong(hash);
-                            if (beatmapLevel != null)
-                                beatmapLevels.Add(beatmapLevel);
-                            else
-                            {
-                                String levelID = (string)(songs[j]["levelId"] ?? songs[j]["levelid"] ?? songs[j]["levelID"]);
-                                if (!string.IsNullOrEmpty(levelID))
-                                {
-                                    beatmapLevel = MatchSongById(levelID);
-                                    if (beatmapLevel != null)
-                                        beatmapLevels.Add(beatmapLevel);
-                                    else
-                                        Plugin.Log.Warn($"Song not downloaded, : {(string.IsNullOrEmpty(levelID) ? " unknown levelID!" : ("levelID " + levelID + "!"))}");
-                                }
-                                else
-                                    Plugin.Log.Warn($"Song not downloaded, : {(string.IsNullOrEmpty(hash) ? " unknown hash!" : ("hash " + hash + "!"))}");
-                            }
-                        }
-                        CustomBeatmapLevelCollectionSO customBeatmapLevelCollection = CustomBeatmapLevelCollectionSO.CreateInstance(beatmapLevels.ToArray());
-                        String playlistTitle = "Untitled Playlist";
-                        String playlistImage = CustomPlaylistSO.DEFAULT_IMAGE;
-                        if ((string)playlistJSON["playlistTitle"] != null)
-                            playlistTitle = (string)playlistJSON["playlistTitle"];
-                        if ((string)playlistJSON["image"] != null)
-                            playlistImage = (string)playlistJSON["image"];
-                        playlists.Add(CustomPlaylistSO.CreateInstance(playlistTitle, playlistImage, customBeatmapLevelCollection));
-                    }
-                }
-                catch (Exception e)
+                    IPlaylist playlist = manager.GetPlaylist(fileName);
+                    if (playlist != null)
+                        playlists.Add(playlist);
+                    else
+                        Plugin.Log.Warn($"Playlist '{fileName}' was null.");
+                }catch(Exception ex)
                 {
-                    Plugin.Log.Critical($"Error loading Playlist File: " + playlistPaths[i] + " Exception: " + e.Message);
+                    Plugin.Log.Error($"Error reading playlist '{fileName}': {ex.Message}");
+                    Plugin.Log.Debug(ex);
                 }
             }
+            //for (int i = 0; i < playlistPaths.Length; i++)
+            //{
+            //    try
+            //    {
+            //        JObject playlistJSON = JObject.Parse(File.ReadAllText(playlistPaths[i]));
+            //        if (playlistJSON["songs"] != null)
+            //        {
+            //            JArray songs = (JArray)playlistJSON["songs"];
+            //            List<IPreviewBeatmapLevel> beatmapLevels = new List<IPreviewBeatmapLevel>();
+            //            for (int j = 0; j < songs.Count; j++)
+            //            {
+            //                IPreviewBeatmapLevel beatmapLevel = null;
+            //                String hash = (string)songs[j]["hash"];
+            //                if (!string.IsNullOrEmpty(hash))
+            //                    beatmapLevel = MatchSong(hash);
+            //                if (beatmapLevel != null)
+            //                    beatmapLevels.Add(beatmapLevel);
+            //                else
+            //                {
+            //                    String levelID = (string)(songs[j]["levelId"] ?? songs[j]["levelid"] ?? songs[j]["levelID"]);
+            //                    if (!string.IsNullOrEmpty(levelID))
+            //                    {
+            //                        beatmapLevel = MatchSongById(levelID);
+            //                        if (beatmapLevel != null)
+            //                            beatmapLevels.Add(beatmapLevel);
+            //                        else
+            //                            Plugin.Log.Warn($"Song not downloaded, : {(string.IsNullOrEmpty(levelID) ? " unknown levelID!" : ("levelID " + levelID + "!"))}");
+            //                    }
+            //                    else
+            //                        Plugin.Log.Warn($"Song not downloaded, : {(string.IsNullOrEmpty(hash) ? " unknown hash!" : ("hash " + hash + "!"))}");
+            //                }
+            //            }
+            //            CustomBeatmapLevelCollectionSO customBeatmapLevelCollection = CustomBeatmapLevelCollectionSO.CreateInstance(beatmapLevels.ToArray());
+            //            String playlistTitle = "Untitled Playlist";
+            //            String playlistImage = CustomPlaylistSO.DEFAULT_IMAGE;
+            //            if ((string)playlistJSON["playlistTitle"] != null)
+            //                playlistTitle = (string)playlistJSON["playlistTitle"];
+            //            if ((string)playlistJSON["image"] != null)
+            //                playlistImage = (string)playlistJSON["image"];
+            //            playlists.Add(CustomPlaylistSO.CreateInstance(playlistTitle, playlistImage, customBeatmapLevelCollection));
+            //        }
+            //    }
+            //    catch (Exception e)
+            //    {
+            //        Plugin.Log.Critical($"Error loading Playlist File: " + playlistPaths[i] + " Exception: " + e.Message);
+            //    }
+            //}
             return playlists.ToArray();
         }
 
