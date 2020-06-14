@@ -5,6 +5,7 @@ using SongCore;
 using System.Collections.Generic;
 using System.Linq;
 using BeatSaberPlaylistsLib;
+using BeatSaberPlaylistsLib.Types;
 
 namespace PlaylistLoaderLite
 {
@@ -12,6 +13,13 @@ namespace PlaylistLoaderLite
     {
         public static IPlaylist[] load()
         {
+            BeatSaberPlaylistsLib.Utilities.Logger = (s, ex) =>
+            {
+                if (s != null)
+                    Plugin.Log.Warn(s);
+                if (ex != null)
+                    Plugin.Log.Error(ex);
+            };
             PlaylistManager manager = PlaylistManager.DefaultManager;
             //string playlistDirectory = 
             //    Path.Combine(Environment.CurrentDirectory, "Playlists") + "\\";
@@ -22,9 +30,16 @@ namespace PlaylistLoaderLite
             for(int i = 0; i < playlistPaths.Length; i++)
             {
                 string fileName = Path.GetFileNameWithoutExtension(playlistPaths[i]);
+                Plugin.Log.Debug($"Loading playlist {Path.GetFileName(playlistPaths[i])}");
                 try
                 {
-                    IPlaylist playlist = manager.GetPlaylist(fileName);
+                    BeatSaberPlaylistsLib.Types.IPlaylist playlist = manager.GetPlaylist(fileName);
+                    IPlaylistSong[] unmatched = playlist.Where(s => s.PreviewBeatmapLevel == null).ToArray();
+                    foreach (IPlaylistSong song in unmatched)
+                    {
+                        Plugin.Log.Warn($"Unmatched song: {song.Name}|{song.LevelId}|{song.Hash}|{song.Key}");
+                        playlist.Remove(song);
+                    }
                     if (playlist != null)
                         playlists.Add(playlist);
                     else
